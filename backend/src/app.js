@@ -8,6 +8,8 @@ import pg from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import authRoutes from './routes/authRoutes.js';
 import projectRoutes from './routes/projectRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import './events/listeners.js';
 
 dotenv.config();
 
@@ -28,6 +30,7 @@ app.use('/uploads', express.static('uploads'));
 // Routes
 app.use('/auth', authRoutes);
 app.use('/projects', projectRoutes);
+app.use('/users', userRoutes);
 
 
 // Health check route
