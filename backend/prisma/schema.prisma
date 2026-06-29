@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  RECRUITER
+  ADMIN
+}
+
+enum NotificationType {
+  PROJECT_CREATED
+  PROJECT_LIKED
+  NEW_FOLLOWER
+}
+
+model User {
+  id         String   @id @default(uuid())
+  googleId   String   @unique @map("google_id")
+  email      String   @unique
+  name       String
+  avatarUrl  String?  @map("avatar_url")
+  role       Role     @default(STUDENT)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  projects         Project[]
+  likes            Like[]
+  
+  // Follower relation
+  followers        Follower[] @relation("UserFollowers")
+  following        Follower[] @relation("UserFollowing")
+
+  // Notifications
+  notificationsReceived Notification[] @relation("UserNotificationsReceived")
+  notificationsTriggered Notification[] @relation("UserNotificationsTriggered")
+
+  @@map("users")
+}
+
+model Project {
+  id            String   @id @default(uuid())
+  studentId     String   @map("student_id")
+  title         String
+  description   String
+  thumbnailUrl  String?  @map("thumbnail_url")
+  repositoryUrl String?  @map("repository_url")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  student       User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  likes         Like[]
+
+  @@map("projects")
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  projectId String   @map("project_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@map("likes")
+}
+
+model Follower {
+  followerId String   @map("follower_id")
+  followedId String   @map("followed_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  follower   User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  followed   User     @relation("UserFollowers", fields: [followedId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followedId])
+  @@map("followers")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  actorId   String           @map("actor_id")
+  type      NotificationType
+  entityId  String?          @map("entity_id")
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  user      User             @relation("UserNotificationsReceived", fields: [userId], references: [id], onDelete: Cascade)
+  actor     User             @relation("UserNotificationsTriggered", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
