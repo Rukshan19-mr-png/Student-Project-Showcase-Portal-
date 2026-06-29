@@ -1,0 +1,88 @@
+import { prisma } from '../app.js';
+import { appEvents } from '../events/eventEmitter.js';
+
+// POST /users/:id/follow
+export const followUser = async (req, res, next) => {
+  try {
+    const followedId = req.params.id;
+    const followerId = req.user.id;
+
+    if (followedId === followerId) {
+      return res.status(400).json({ error: 'You cannot follow yourself.' });
+    }
+
+    // Check if target user exists
+    const targetUser = await prisma.user.findUnique({
+      where: { id: followedId }
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User to follow not found.' });
+    }
+
+    // Check if relationship already exists
+    const existingFollow = await prisma.follower.findUnique({
+      where: {
+        followerId_followedId: {
+          followerId,
+          followedId
+        }
+      }
+    });
+
+    if (existingFollow) {
+      return res.status(400).json({ error: 'You are already following this user.' });
+    }
+
+    // Create follow relationship
+    await prisma.follower.create({
+      data: {
+        followerId,
+        followedId
+      }
+    });
+
+    // Emit event
+    appEvents.emit('UserFollowed', { followerId, followedId });
+
+    res.status(201).json({ message: 'Successfully followed user.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// DELETE /users/:id/follow
+export const unfollowUser = async (req, res, next) => {
+  try {
+    const followedId = req.params.id;
+    const followerId = req.user.id;
+
+    // Check if relationship exists
+    const existingFollow = await prisma.follower.findUnique({
+      where: {
+        followerId_followedId: {
+          followerId,
+          followedId
+        }
+      }
+    });
+
+    if (!existingFollow) {
+      return res.status(404).json({ error: 'You are not following this user.' });
+    }
+
+    // Delete follow relationship
+    await prisma.follower.delete({
+      where: {
+        followerId_followedId: {
+          followerId,
+          followedId
+        }
+      }
+    });
+
+    res.status(200).json({ message: 'Successfully unfollowed user.' });
+  } catch (error) {
+    next(error);
+  }
+};
