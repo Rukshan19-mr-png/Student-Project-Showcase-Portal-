@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import fs from 'fs';
 import { prisma } from '../app.js';
+import { appEvents } from '../events/eventEmitter.js';
 
 // Zod schemas for validation
 const createProjectSchema = z.object({
@@ -82,6 +83,9 @@ export const createProject = async (req, res, next) => {
         }
       }
     });
+
+    // Emit event
+    appEvents.emit('ProjectCreated', { studentId: req.user.id, projectId: project.id });
 
     res.status(201).json(project);
   } catch (error) {
@@ -280,6 +284,88 @@ export const deleteProject = async (req, res, next) => {
     deleteFile(existingProject.thumbnailUrl);
 
     res.status(200).json({ message: 'Project successfully deleted.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// POST /projects/:id/like
+export const likeProject = async (req, res, next) => {
+  try {
+    const projectId = req.params.id;
+    const userId = req.user.id;
+
+    // Check if project exists
+    const project = await prisma.project.findUnique({
+      where: { id: projectId }
+    });
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found.' });
+    }
+
+    // Check if already liked
+    const existingLike = await prisma.like.findUnique({
+      where: {
+        userId_projectId: {
+          userId,
+          projectId
+        }
+      }
+    });
+
+    if (existingLike) {
+      return res.status(400).json({ error: 'You have already liked this project.' });
+    }
+
+    // Create like
+    await prisma.like.create({
+      data: {
+        userId,
+        projectId
+      }
+    });
+
+    // Emit event
+    appEvents.emit('ProjectLiked', { userId, projectId });
+
+    res.status(201).json({ message: 'Project liked successfully.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// DELETE /projects/:id/like
+export const unlikeProject = async (req, res, next) => {
+  try {
+    const projectId = req.params.id;
+    const userId = req.user.id;
+
+    // Check if like exists
+    const existingLike = await prisma.like.findUnique({
+      where: {
+        userId_projectId: {
+          userId,
+          projectId
+        }
+      }
+    });
+
+    if (!existingLike) {
+      return res.status(404).json({ error: 'You have not liked this project.' });
+    }
+
+    // Delete like
+    await prisma.like.delete({
+      where: {
+        userId_projectId: {
+          userId,
+          projectId
+        }
+      }
+    });
+
+    res.status(200).json({ message: 'Project unliked successfully.' });
   } catch (error) {
     next(error);
   }

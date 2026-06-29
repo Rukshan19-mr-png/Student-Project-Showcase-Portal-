@@ -4,7 +4,9 @@ import {
   listProjects,
   getProjectDetail,
   updateProject,
-  deleteProject
+  deleteProject,
+  likeProject,
+  unlikeProject
 } from '../controllers/projectController.js';
 import { authenticate, authorizeRole } from '../middlewares/authMiddleware.js';
 import { upload } from '../middlewares/uploadMiddleware.js';
@@ -38,5 +40,9 @@ router.delete(
   authenticate,
   deleteProject
 );
+
+// Protected routes (Any authenticated user can like/unlike)
+router.post('/:id/like', authenticate, likeProject);
+router.delete('/:id/like', authenticate, unlikeProject);
 
 export default router;
