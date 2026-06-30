@@ -4,22 +4,35 @@ import { prisma } from '../app.js';
 export const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    let token = null;
+    let secret = null;
+    let userIdField = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      // Bearer token from Authorization header (e.g. mock-login flow)
+      token = authHeader.split(' ')[1];
+      secret = process.env.JWT_SECRET || 'fallback_secret_key';
+      userIdField = 'id';
+    } else if (req.cookies?.jwt) {
+      // Fall back to HttpOnly cookie (Google OAuth flow sets this)
+      token = req.cookies.jwt;
+      secret = process.env.SESSION_SECRET;
+      userIdField = 'userId';
+    }
+
+    if (!token) {
       return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
-    const token = authHeader.split(' ')[1];
     let decoded;
-    
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key');
+      decoded = jwt.verify(token, secret);
     } catch (err) {
       return res.status(401).json({ error: 'Invalid or expired token.' });
     }
 
-    // Find user in database
     const user = await prisma.user.findUnique({
-      where: { id: decoded.id }
+      where: { id: decoded[userIdField] }
     });
 
     if (!user) {

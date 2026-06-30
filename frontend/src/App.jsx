@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './routes/PrivateRoute';
 import RoleRoute from './routes/RoleRoute';
@@ -6,30 +6,18 @@ import Navbar from './components/Navbar';
 import LoginPage from './pages/LoginPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import HomePage from './pages/HomePage';
+import ProjectListPage from './pages/ProjectListPage';
+import ProjectDetailPage from './pages/ProjectDetailPage';
+import MyProjectsPage from './pages/MyProjectsPage';
+import NotificationsPage from './pages/NotificationsPage';
+import AdminPage from './pages/AdminPage';
 import NotFoundPage from './pages/NotFoundPage';
 
-/**
- * App — root component.
- *
- * Route structure:
- *   /login              → LoginPage (public)
- *   /auth/callback      → AuthCallbackPage (public — handles OAuth edge cases)
- *
- *   (PrivateRoute)       → requires authentication
- *     /                 → HomePage
- *
- *   (RoleRoute ADMIN)   → requires ADMIN role
- *     /admin            → AdminPage (placeholder — not yet built)
- *
- *   *                   → NotFoundPage
- */
 function AppLayout({ children }) {
   return (
     <>
       <Navbar />
-      <main className="main-content">
-        {children}
-      </main>
+      <main className="main-content">{children}</main>
     </>
   );
 }
@@ -39,39 +27,30 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {/* ── Public routes ─────────────────────────────────────────── */}
+          {/* Public */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
-          {/* ── Protected routes (auth required) ──────────────────────── */}
+          {/* Public App Routes */}
+          <Route path="/" element={<AppLayout><HomePage /></AppLayout>} />
+          <Route path="/projects" element={<AppLayout><ProjectListPage /></AppLayout>} />
+          <Route path="/projects/:id" element={<AppLayout><ProjectDetailPage /></AppLayout>} />
+
+          {/* Protected */}
           <Route element={<PrivateRoute />}>
-            <Route
-              path="/"
-              element={
-                <AppLayout>
-                  <HomePage />
-                </AppLayout>
-              }
-            />
+            <Route path="/notifications" element={<AppLayout><NotificationsPage /></AppLayout>} />
           </Route>
 
-          {/* ── Admin-only routes ─────────────────────────────────────── */}
+          {/* Student only */}
+          <Route element={<RoleRoute allowedRoles={['STUDENT']} redirectTo="/" />}>
+            <Route path="/my-projects" element={<AppLayout><MyProjectsPage /></AppLayout>} />
+          </Route>
+
+          {/* Admin only */}
           <Route element={<RoleRoute allowedRoles={['ADMIN']} redirectTo="/" />}>
-            <Route
-              path="/admin"
-              element={
-                <AppLayout>
-                  {/* AdminPage placeholder — to be implemented later */}
-                  <div className="placeholder-page">
-                    <h1>Admin Dashboard</h1>
-                    <p>Admin features coming soon.</p>
-                  </div>
-                </AppLayout>
-              }
-            />
+            <Route path="/admin" element={<AppLayout><AdminPage /></AppLayout>} />
           </Route>
 
-          {/* ── Catch-all ─────────────────────────────────────────────── */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </AuthProvider>

@@ -1,20 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import NotificationBell from './NotificationBell';
 
-/**
- * Navbar — application shell header.
- *
- * - Authenticated: shows user avatar, name, role badge, and a dropdown with logout
- * - Unauthenticated: shows a Login button
- */
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -42,7 +36,6 @@ export default function Navbar() {
   return (
     <header className="navbar">
       <div className="navbar-inner">
-        {/* Brand */}
         <Link to="/" className="navbar-brand" id="navbar-brand-link">
           <div className="navbar-logo">
             <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="32" height="32">
@@ -60,84 +53,76 @@ export default function Navbar() {
           <span className="navbar-brand-name">Showcase</span>
         </Link>
 
-        {/* Nav links */}
         <nav className="navbar-links">
           {isAuthenticated && (
-            <Link to="/" className="navbar-link" id="navbar-home-link">Home</Link>
+            <>
+              <Link to="/" className="navbar-link" id="navbar-home-link">Home</Link>
+              <Link to="/projects" className="navbar-link" id="navbar-projects-link">Projects</Link>
+              {user?.role === 'STUDENT' && (
+                <Link to="/my-projects" className="navbar-link" id="navbar-my-projects-link">My Projects</Link>
+              )}
+              {user?.role === 'ADMIN' && (
+                <Link to="/admin" className="navbar-link" id="navbar-admin-link">Admin</Link>
+              )}
+            </>
           )}
         </nav>
 
-        {/* Auth section */}
         <div className="navbar-auth">
           {isAuthenticated ? (
-            <div className="navbar-user" ref={dropdownRef}>
-              <button
-                id="navbar-user-menu-btn"
-                className="navbar-user-btn"
-                onClick={() => setDropdownOpen((prev) => !prev)}
-                aria-expanded={dropdownOpen}
-                aria-haspopup="true"
-              >
-                {/* Avatar */}
-                {user?.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.name}
-                    className="navbar-avatar"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="navbar-avatar navbar-avatar--fallback">
-                    {user?.name?.charAt(0)?.toUpperCase() ?? '?'}
+            <div className="navbar-auth-group">
+              <NotificationBell />
+              <div className="navbar-user" ref={dropdownRef}>
+                <button
+                  id="navbar-user-menu-btn"
+                  className="navbar-user-btn"
+                  onClick={() => setDropdownOpen((prev) => !prev)}
+                  aria-expanded={dropdownOpen}
+                  aria-haspopup="true"
+                >
+                  {user?.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={user.name} className="navbar-avatar" referrerPolicy="no-referrer" />
+                  ) : (
+                    <div className="navbar-avatar navbar-avatar--fallback">
+                      {user?.name?.charAt(0)?.toUpperCase() ?? '?'}
+                    </div>
+                  )}
+                  <div className="navbar-user-info">
+                    <span className="navbar-user-name">{user?.name}</span>
+                    <span className={getRoleBadgeClass(user?.role)}>{user?.role ?? 'USER'}</span>
+                  </div>
+                  <svg
+                    className={`navbar-chevron${dropdownOpen ? ' navbar-chevron--open' : ''}`}
+                    viewBox="0 0 20 20" fill="currentColor" width="16" height="16"
+                  >
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+
+                {dropdownOpen && (
+                  <div className="navbar-dropdown" role="menu">
+                    <div className="navbar-dropdown-header">
+                      <p className="navbar-dropdown-name">{user?.name}</p>
+                      <p className="navbar-dropdown-email">{user?.email}</p>
+                    </div>
+                    <div className="navbar-dropdown-divider" />
+                    <button
+                      id="navbar-logout-btn"
+                      className="navbar-dropdown-item navbar-dropdown-item--danger"
+                      onClick={handleLogout}
+                      role="menuitem"
+                    >
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                        <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
+                      </svg>
+                      Sign out
+                    </button>
                   </div>
                 )}
-
-                {/* Name & Role */}
-                <div className="navbar-user-info">
-                  <span className="navbar-user-name">{user?.name}</span>
-                  <span className={getRoleBadgeClass(user?.role)}>
-                    {user?.role ?? 'USER'}
-                  </span>
-                </div>
-
-                {/* Chevron */}
-                <svg
-                  className={`navbar-chevron${dropdownOpen ? ' navbar-chevron--open' : ''}`}
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  width="16"
-                  height="16"
-                >
-                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </button>
-
-              {/* Dropdown */}
-              {dropdownOpen && (
-                <div className="navbar-dropdown" role="menu">
-                  <div className="navbar-dropdown-header">
-                    <p className="navbar-dropdown-name">{user?.name}</p>
-                    <p className="navbar-dropdown-email">{user?.email}</p>
-                  </div>
-                  <div className="navbar-dropdown-divider" />
-                  <button
-                    id="navbar-logout-btn"
-                    className="navbar-dropdown-item navbar-dropdown-item--danger"
-                    onClick={handleLogout}
-                    role="menuitem"
-                  >
-                    <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-                      <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
-                    </svg>
-                    Sign out
-                  </button>
-                </div>
-              )}
+              </div>
             </div>
           ) : (
-            <Link to="/login" className="navbar-login-btn" id="navbar-login-link">
-              Sign In
-            </Link>
+            <Link to="/login" className="navbar-login-btn" id="navbar-login-link">Sign In</Link>
           )}
         </div>
       </div>
