@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import passport from './config/passport.js';
 import errorHandler from './middlewares/errorHandler.js';
+import { UPLOAD_DIR } from './middlewares/uploadMiddleware.js';
 import { prisma } from './config/db.js';
 export { prisma };
 
@@ -23,13 +24,17 @@ app.use(cors({
   origin: process.env.FRONTEND_URL,
   credentials: true,
 }));
-app.use(express.json()); // JSON body parsing
+app.use(express.json({ limit: '100kb' })); // JSON body parsing
 app.use(cookieParser()); // Parse cookies
 app.use(morgan('dev')); // Request logger
 app.use(passport.initialize()); // Initialize Passport
 
 // Serve static upload files
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(UPLOAD_DIR, {
+  fallthrough: false,
+  index: false,
+  maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
+}));
 
 // Routes
 app.use('/auth', authRoutes);

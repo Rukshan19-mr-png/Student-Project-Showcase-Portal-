@@ -1,39 +1,65 @@
 import { z } from 'zod';
 import fs from 'fs';
-import { prisma } from '../app.js';
+import path from 'path';
+import { prisma } from '../config/db.js';
 import { appEvents } from '../events/eventEmitter.js';
+import { UPLOAD_DIR } from '../middlewares/uploadMiddleware.js';
+import { formatZodIssues, paginationSchema, uuidSchema } from '../utils/validation.js';
+
+const projectIdParamsSchema = z.object({
+  id: uuidSchema,
+});
+
+const projectListQuerySchema = paginationSchema.extend({
+  studentId: uuidSchema.optional(),
+});
+
+const httpUrlSchema = z.string()
+  .trim()
+  .url('Invalid URL format')
+  .refine((value) => ['http:', 'https:'].includes(new URL(value).protocol), 'URL must use HTTP or HTTPS');
 
 // Zod schemas for validation
 const createProjectSchema = z.object({
   title: z.string()
+    .trim()
     .min(3, 'Title must be at least 3 characters long')
     .max(100, 'Title cannot exceed 100 characters'),
   description: z.string()
-    .min(10, 'Description must be at least 10 characters long'),
-  repositoryUrl: z.string()
-    .url('Invalid URL format')
-    .optional()
-    .or(z.literal(''))
+    .trim()
+    .min(10, 'Description must be at least 10 characters long')
+    .max(2000, 'Description cannot exceed 2000 characters'),
+  repositoryUrl: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    httpUrlSchema.optional()
+  )
 });
 
 const updateProjectSchema = z.object({
   title: z.string()
+    .trim()
     .min(3, 'Title must be at least 3 characters long')
     .max(100, 'Title cannot exceed 100 characters')
     .optional(),
   description: z.string()
+    .trim()
     .min(10, 'Description must be at least 10 characters long')
+    .max(2000, 'Description cannot exceed 2000 characters')
     .optional(),
-  repositoryUrl: z.string()
-    .url('Invalid URL format')
-    .optional()
-    .or(z.literal(''))
+  repositoryUrl: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? null : value),
+    httpUrlSchema.nullable().optional()
+  )
 });
 
 // Helper to delete uploaded files from local disk
 const deleteFile = (fileUrl) => {
   if (fileUrl && fileUrl.startsWith('/uploads/')) {
-    const filePath = fileUrl.substring(1); // remove leading slash
+    const filename = path.basename(fileUrl);
+    const filePath = path.resolve(UPLOAD_DIR, filename);
+    if (!filePath.startsWith(`${UPLOAD_DIR}${path.sep}`)) {
+      return;
+    }
     if (fs.existsSync(filePath)) {
       try {
         fs.unlinkSync(filePath);
@@ -54,10 +80,7 @@ export const createProject = async (req, res, next) => {
       }
       return res.status(400).json({
         error: 'Validation failed',
-        details: validation.error.errors.map(e => ({
-          field: e.path.join('.'),
-          message: e.message
-        }))
+        details: formatZodIssues(validation.error)
       });
     }
 
@@ -99,14 +122,15 @@ export const createProject = async (req, res, next) => {
 // GET /projects (list all — public, support pagination + filter by student)
 export const listProjects = async (req, res, next) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
-    const studentId = req.query.studentId;
-
-    if (page < 1 || limit < 1) {
-      return res.status(400).json({ error: 'Page and limit must be positive integers.' });
+    const validation = projectListQuerySchema.safeParse(req.query);
+    if (!validation.success) {
+      return res.status(400).json({
+        error: 'Invalid query parameters.',
+        details: formatZodIssues(validation.error)
+      });
     }
 
+    const { page, limit, studentId } = validation.data;
     const skip = (page - 1) * limit;
 
     const where = {};
@@ -153,7 +177,15 @@ export const listProjects = async (req, res, next) => {
 // GET /projects/:id (single project detail — public)
 export const getProjectDetail = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const validation = projectIdParamsSchema.safeParse(req.params);
+    if (!validation.success) {
+      return res.status(400).json({
+        error: 'Invalid request parameters.',
+        details: formatZodIssues(validation.error)
+      });
+    }
+
+    const { id } = validation.data;
 
     const project = await prisma.project.findUnique({
       where: { id },
@@ -182,7 +214,18 @@ export const getProjectDetail = async (req, res, next) => {
 // PUT /projects/:id (update — only the owning student)
 export const updateProject = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const paramValidation = projectIdParamsSchema.safeParse(req.params);
+    if (!paramValidation.success) {
+      if (req.file) {
+        try { fs.unlinkSync(req.file.path); } catch (e) {}
+      }
+      return res.status(400).json({
+        error: 'Invalid request parameters.',
+        details: formatZodIssues(paramValidation.error)
+      });
+    }
+
+    const { id } = paramValidation.data;
 
     const existingProject = await prisma.project.findUnique({
       where: { id }
@@ -210,10 +253,7 @@ export const updateProject = async (req, res, next) => {
       }
       return res.status(400).json({
         error: 'Validation failed',
-        details: validation.error.errors.map(e => ({
-          field: e.path.join('.'),
-          message: e.message
-        }))
+        details: formatZodIssues(validation.error)
       });
     }
 
@@ -231,7 +271,7 @@ export const updateProject = async (req, res, next) => {
       data: {
         title: title !== undefined ? title : existingProject.title,
         description: description !== undefined ? description : existingProject.description,
-        repositoryUrl: repositoryUrl !== undefined ? (repositoryUrl || null) : existingProject.repositoryUrl,
+        repositoryUrl: repositoryUrl !== undefined ? repositoryUrl : existingProject.repositoryUrl,
         thumbnailUrl
       },
       include: {
@@ -258,7 +298,15 @@ export const updateProject = async (req, res, next) => {
 // DELETE /projects/:id (delete — only the owning student or admin)
 export const deleteProject = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const validation = projectIdParamsSchema.safeParse(req.params);
+    if (!validation.success) {
+      return res.status(400).json({
+        error: 'Invalid request parameters.',
+        details: formatZodIssues(validation.error)
+      });
+    }
+
+    const { id } = validation.data;
 
     const existingProject = await prisma.project.findUnique({
       where: { id }
@@ -292,7 +340,15 @@ export const deleteProject = async (req, res, next) => {
 // POST /projects/:id/like
 export const likeProject = async (req, res, next) => {
   try {
-    const projectId = req.params.id;
+    const validation = projectIdParamsSchema.safeParse(req.params);
+    if (!validation.success) {
+      return res.status(400).json({
+        error: 'Invalid request parameters.',
+        details: formatZodIssues(validation.error)
+      });
+    }
+
+    const projectId = validation.data.id;
     const userId = req.user.id;
 
     // Check if project exists
@@ -338,7 +394,15 @@ export const likeProject = async (req, res, next) => {
 // DELETE /projects/:id/like
 export const unlikeProject = async (req, res, next) => {
   try {
-    const projectId = req.params.id;
+    const validation = projectIdParamsSchema.safeParse(req.params);
+    if (!validation.success) {
+      return res.status(400).json({
+        error: 'Invalid request parameters.',
+        details: formatZodIssues(validation.error)
+      });
+    }
+
+    const projectId = validation.data.id;
     const userId = req.user.id;
 
     // Check if like exists

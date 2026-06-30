@@ -1,10 +1,24 @@
-import { prisma } from '../app.js';
+import { z } from 'zod';
+import { prisma } from '../config/db.js';
 import { appEvents } from '../events/eventEmitter.js';
+import { formatZodIssues, uuidSchema } from '../utils/validation.js';
+
+const userIdParamsSchema = z.object({
+  id: uuidSchema,
+});
 
 // POST /users/:id/follow
 export const followUser = async (req, res, next) => {
   try {
-    const followedId = req.params.id;
+    const validation = userIdParamsSchema.safeParse(req.params);
+    if (!validation.success) {
+      return res.status(400).json({
+        error: 'Invalid request parameters.',
+        details: formatZodIssues(validation.error)
+      });
+    }
+
+    const followedId = validation.data.id;
     const followerId = req.user.id;
 
     if (followedId === followerId) {
@@ -54,7 +68,15 @@ export const followUser = async (req, res, next) => {
 // DELETE /users/:id/follow
 export const unfollowUser = async (req, res, next) => {
   try {
-    const followedId = req.params.id;
+    const validation = userIdParamsSchema.safeParse(req.params);
+    if (!validation.success) {
+      return res.status(400).json({
+        error: 'Invalid request parameters.',
+        details: formatZodIssues(validation.error)
+      });
+    }
+
+    const followedId = validation.data.id;
     const followerId = req.user.id;
 
     // Check if relationship exists

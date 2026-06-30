@@ -1,4 +1,10 @@
-import { prisma } from '../app.js';
+import { z } from 'zod';
+import { prisma } from '../config/db.js';
+import { formatZodIssues, paginationSchema, uuidSchema } from '../utils/validation.js';
+
+const notificationIdParamsSchema = z.object({
+  id: uuidSchema,
+});
 
 /**
  * GET /notifications
@@ -6,13 +12,15 @@ import { prisma } from '../app.js';
  */
 export const getNotifications = async (req, res, next) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
-    
-    if (page < 1 || limit < 1) {
-      return res.status(400).json({ error: 'Page and limit must be positive integers' });
+    const validation = paginationSchema.safeParse(req.query);
+    if (!validation.success) {
+      return res.status(400).json({
+        error: 'Invalid query parameters.',
+        details: formatZodIssues(validation.error)
+      });
     }
-    
+
+    const { page, limit } = validation.data;
     const skip = (page - 1) * limit;
 
     const [notifications, total] = await Promise.all([
@@ -56,7 +64,15 @@ export const getNotifications = async (req, res, next) => {
  */
 export const markAsRead = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const validation = notificationIdParamsSchema.safeParse(req.params);
+    if (!validation.success) {
+      return res.status(400).json({
+        error: 'Invalid request parameters.',
+        details: formatZodIssues(validation.error)
+      });
+    }
+
+    const { id } = validation.data;
 
     const notification = await prisma.notification.findUnique({
       where: { id }

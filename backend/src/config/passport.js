@@ -20,22 +20,22 @@ passport.use(
           return done(new Error('No email found in Google profile'), null);
         }
 
-        // Upsert user in the database
-        const user = await prisma.user.upsert({
-          where: { email },
-          update: {
-            googleId: profile.id,
-            name: profile.displayName,
-            avatarUrl: profile.photos?.[0]?.value,
-          },
-          create: {
-            email,
-            googleId: profile.id,
-            name: profile.displayName,
-            avatarUrl: profile.photos?.[0]?.value,
-            // Default role is STUDENT as defined in Prisma schema
-          },
-        });
+          // Upsert user in the database
+          const user = await prisma.user.upsert({
+            where: { email },
+            update: {
+              googleId: profile.id,
+              name: profile.displayName,
+              avatarUrl: profile.photos?.[0]?.value,
+            },
+            create: {
+              email,
+              googleId: profile.id,
+              name: profile.displayName,
+              avatarUrl: profile.photos?.[0]?.value,
+              // Default role is STUDENT as defined in Prisma schema
+            },
+          });
 
         // Pass user down to the next step
         return done(null, user);

@@ -10,6 +10,7 @@ import {
 } from '../controllers/projectController.js';
 import { authenticate, authorizeRole } from '../middlewares/authMiddleware.js';
 import { upload } from '../middlewares/uploadMiddleware.js';
+import { likeRateLimiter } from '../middlewares/rateLimitMiddleware.js';
 
 const router = express.Router();
 
@@ -42,7 +43,7 @@ router.delete(
 );
 
 // Protected routes (Any authenticated user can like/unlike)
-router.post('/:id/like', authenticate, likeProject);
-router.delete('/:id/like', authenticate, unlikeProject);
+router.post('/:id/like', authenticate, likeRateLimiter, likeProject);
+router.delete('/:id/like', authenticate, likeRateLimiter, unlikeProject);
 
 export default router;

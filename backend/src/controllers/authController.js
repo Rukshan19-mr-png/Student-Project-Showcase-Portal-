@@ -1,18 +1,30 @@
 import jwt from 'jsonwebtoken';
-import { prisma } from '../app.js';
+import { z } from 'zod';
+import { prisma } from '../config/db.js';
+import { getClearJwtCookieOptions, getJwtCookieOptions, JWT_COOKIE_NAME } from '../utils/cookies.js';
+import { validateBody } from '../utils/validation.js';
+
+const mockLoginSchema = z.object({
+  email: z.email().trim().toLowerCase().max(254),
+  name: z.string().trim().min(1).max(100).optional(),
+  role: z.enum(['STUDENT', 'RECRUITER', 'ADMIN']).default('STUDENT'),
+});
+
+const getJwtSecret = (name, fallback) => {
+  const secret = process.env[name];
+  if (!secret && process.env.NODE_ENV === 'production') {
+    throw new Error(`${name} must be configured in production.`);
+  }
+  return secret || fallback;
+};
 
 export const mockLogin = async (req, res, next) => {
   try {
-    const { email, name, role } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ error: 'Email is required' });
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(404).json({ error: 'Mock login is not available in production.' });
     }
 
-    const assignedRole = role || 'STUDENT';
-    if (!['STUDENT', 'RECRUITER', 'ADMIN'].includes(assignedRole)) {
-      return res.status(400).json({ error: 'Invalid role. Must be STUDENT, RECRUITER, or ADMIN.' });
-    }
+    const { email, name, role } = validateBody(mockLoginSchema, req.body);
 
     // Find user or create if not exists
     let user = await prisma.user.findUnique({
@@ -24,12 +36,12 @@ export const mockLogin = async (req, res, next) => {
         data: {
           email,
           name: name || email.split('@')[0],
-          role: assignedRole,
+          role,
           googleId: `mock-google-id-${Date.now()}-${Math.floor(Math.random() * 100000)}`
         }
       });
     } else {
-      // If user exists but role doesn't match requested role, update it (useful for testing different roles with same email)
+      // Role switching is kept to non-production mock auth only.
       if (role && user.role !== role) {
         user = await prisma.user.update({
           where: { id: user.id },
@@ -41,7 +53,7 @@ export const mockLogin = async (req, res, next) => {
     // Generate JWT
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'fallback_secret_key',
+      getJwtSecret('JWT_SECRET', 'fallback_secret_key'),
       { expiresIn: '24h' }
     );
 
@@ -61,7 +73,7 @@ export const mockLogin = async (req, res, next) => {
 };
 
 const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.SESSION_SECRET || 'fallback_session_secret', {
+  return jwt.sign({ userId }, getJwtSecret('SESSION_SECRET', 'fallback_session_secret'), {
     expiresIn: '7d',
   });
 };
@@ -75,12 +87,7 @@ export const googleCallback = (req, res) => {
   const token = generateToken(req.user.id);
 
   // Set JWT as an HttpOnly cookie
-  res.cookie('jwt', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', // true if in production
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // For cross-origin cookies in dev vs prod
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  });
+  res.cookie(JWT_COOKIE_NAME, token, getJwtCookieOptions());
 
   // Redirect to frontend dashboard or home
   res.redirect(`${process.env.FRONTEND_URL}/`);
@@ -92,10 +99,6 @@ export const getMe = (req, res) => {
 };
 
 export const logout = (req, res) => {
-  res.clearCookie('jwt', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  });
+  res.clearCookie(JWT_COOKIE_NAME, getClearJwtCookieOptions());
   res.status(200).json({ message: 'Logged out successfully' });
 };

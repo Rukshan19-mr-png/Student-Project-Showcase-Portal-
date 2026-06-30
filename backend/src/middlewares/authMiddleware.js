@@ -1,5 +1,14 @@
 import jwt from 'jsonwebtoken';
-import { prisma } from '../app.js';
+import { prisma } from '../config/db.js';
+import { JWT_COOKIE_NAME } from '../utils/cookies.js';
+
+const getJwtSecret = (name, fallback) => {
+  const secret = process.env[name];
+  if (!secret && process.env.NODE_ENV === 'production') {
+    throw new Error(`${name} must be configured in production.`);
+  }
+  return secret || fallback;
+};
 
 export const authenticate = async (req, res, next) => {
   try {
@@ -11,12 +20,12 @@ export const authenticate = async (req, res, next) => {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       // Bearer token from Authorization header (e.g. mock-login flow)
       token = authHeader.split(' ')[1];
-      secret = process.env.JWT_SECRET || 'fallback_secret_key';
+      secret = getJwtSecret('JWT_SECRET', 'fallback_secret_key');
       userIdField = 'id';
-    } else if (req.cookies?.jwt) {
+    } else if (req.cookies?.[JWT_COOKIE_NAME]) {
       // Fall back to HttpOnly cookie (Google OAuth flow sets this)
-      token = req.cookies.jwt;
-      secret = process.env.SESSION_SECRET;
+      token = req.cookies[JWT_COOKIE_NAME];
+      secret = getJwtSecret('SESSION_SECRET', 'fallback_session_secret');
       userIdField = 'userId';
     }
 
@@ -48,12 +57,12 @@ export const authenticate = async (req, res, next) => {
 
 export const requireAuth = async (req, res, next) => {
   try {
-    const token = req.cookies.jwt;
+    const token = req.cookies[JWT_COOKIE_NAME];
     if (!token) {
       return res.status(401).json({ message: 'Authentication required. No token provided.' });
     }
 
-    const decoded = jwt.verify(token, process.env.SESSION_SECRET);
+    const decoded = jwt.verify(token, getJwtSecret('SESSION_SECRET', 'fallback_session_secret'));
     const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
 
     if (!user) {
