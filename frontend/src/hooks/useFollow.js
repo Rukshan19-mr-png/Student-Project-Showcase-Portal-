@@ -12,6 +12,8 @@ export function useFollow(userId) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['project'] });
+      queryClient.invalidateQueries({ queryKey: ['following'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
   });
 
@@ -19,6 +21,8 @@ export function useFollow(userId) {
     mutationFn: () => api.delete(`/users/${userId}/follow`),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['project'] });
+      queryClient.invalidateQueries({ queryKey: ['following'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
   });
 

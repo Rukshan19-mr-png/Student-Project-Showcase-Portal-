@@ -21,6 +21,7 @@ export default function FollowingPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['following'] });
       queryClient.invalidateQueries({ queryKey: ['project'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
   });
 

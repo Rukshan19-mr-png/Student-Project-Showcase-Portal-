@@ -330,6 +330,8 @@ export default function AdminPage() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['adminProjects'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['myProjects'] });
+      queryClient.invalidateQueries({ queryKey: ['following'] });
     },
   });
 
@@ -344,7 +346,13 @@ export default function AdminPage() {
 
   const deleteUserMutation = useMutation({
     mutationFn: (id) => api.delete(`/users/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adminUsers'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+      queryClient.invalidateQueries({ queryKey: ['adminProjects'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['myProjects'] });
+      queryClient.invalidateQueries({ queryKey: ['following'] });
+    },
   });
 
   const projects = projectData?.projects ?? [];
