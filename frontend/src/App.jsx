@@ -12,6 +12,8 @@ import MyProjectsPage from './pages/MyProjectsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import AdminPage from './pages/AdminPage';
 import FollowingPage from './pages/FollowingPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function AppLayout({ children }) {
@@ -31,6 +33,8 @@ export default function App() {
           {/* Public */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="/terms" element={<AppLayout><TermsPage /></AppLayout>} />
+          <Route path="/privacy" element={<AppLayout><PrivacyPage /></AppLayout>} />
 
           {/* Public App Routes */}
           <Route path="/" element={<AppLayout><HomePage /></AppLayout>} />
