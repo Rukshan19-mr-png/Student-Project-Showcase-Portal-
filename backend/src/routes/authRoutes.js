@@ -11,6 +11,11 @@ const router = express.Router();
 router.post('/signup', authRateLimiter, signup);
 router.post('/login', authRateLimiter, login);
 
+// Auth configuration status (public — used by the frontend to conditionally show Google button)
+router.get('/status', (req, res) => {
+  res.json({ googleAuthEnabled: isGoogleAuthConfigured });
+});
+
 const requireGoogleAuthConfigured = (req, res, next) => {
   if (!isGoogleAuthConfigured) {
     return res.status(503).json({ error: 'Google OAuth is not configured.' });
@@ -18,14 +23,24 @@ const requireGoogleAuthConfigured = (req, res, next) => {
   return next();
 };
 
-// Mock login route
-router.post('/mock-login', authRateLimiter, mockLogin);
+// Mock login route deactivated
 
 // Trigger Google OAuth login
 router.get('/google', authRateLimiter, requireGoogleAuthConfigured, passport.authenticate('google', { scope: ['profile', 'email'] }));
 
-// Google OAuth callback
-router.get('/google/callback', authRateLimiter, requireGoogleAuthConfigured, passport.authenticate('google', { session: false, failureRedirect: '/login' }), googleCallback);
+// Google OAuth callback — failureRedirect must be an absolute URL to the frontend
+router.get(
+  '/google/callback',
+  authRateLimiter,
+  requireGoogleAuthConfigured,
+  (req, res, next) => {
+    passport.authenticate('google', {
+      session: false,
+      failureRedirect: `${process.env.FRONTEND_URL}/login?error=auth_failed`,
+    })(req, res, next);
+  },
+  googleCallback
+);
 
 // Get current user (protected route)
 router.get('/me', requireAuth, getMe);

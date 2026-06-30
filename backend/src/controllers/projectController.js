@@ -49,7 +49,8 @@ const updateProjectSchema = z.object({
   repositoryUrl: z.preprocess(
     (value) => (typeof value === 'string' && value.trim() === '' ? null : value),
     httpUrlSchema.nullable().optional()
-  )
+  ),
+  isArchived: z.boolean().optional()
 });
 
 // Helper to delete uploaded files from local disk
@@ -133,9 +134,16 @@ export const listProjects = async (req, res, next) => {
     const { page, limit, studentId } = validation.data;
     const skip = (page - 1) * limit;
 
-    const where = {};
+    const where = { isArchived: false }; // Hide archived projects by default
+    if (req.user && req.user.role === 'ADMIN') {
+      delete where.isArchived; // Admin sees everything
+    }
     if (studentId) {
       where.studentId = studentId;
+      // If the owner themselves is requesting their list, show archived projects too
+      if (req.user && req.user.id === studentId) {
+        delete where.isArchived;
+      }
     }
 
     const [projects, total] = await Promise.all([
@@ -310,7 +318,7 @@ export const updateProject = async (req, res, next) => {
       });
     }
 
-    const { title, description, repositoryUrl } = validation.data;
+    const { title, description, repositoryUrl, isArchived } = validation.data;
 
     let thumbnailUrl = existingProject.thumbnailUrl;
     if (req.file) {
@@ -325,6 +333,7 @@ export const updateProject = async (req, res, next) => {
         title: title !== undefined ? title : existingProject.title,
         description: description !== undefined ? description : existingProject.description,
         repositoryUrl: repositoryUrl !== undefined ? repositoryUrl : existingProject.repositoryUrl,
+        isArchived: isArchived !== undefined ? isArchived : existingProject.isArchived,
         thumbnailUrl
       },
       include: {

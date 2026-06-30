@@ -98,8 +98,9 @@ export const googleCallback = (req, res) => {
   // Set JWT as an HttpOnly cookie
   res.cookie(JWT_COOKIE_NAME, token, getJwtCookieOptions());
 
-  // Redirect to frontend dashboard or home
-  res.redirect(`${process.env.FRONTEND_URL}/`);
+  // Redirect to the frontend callback page so React can hydrate auth state.
+  // AuthCallbackPage will call /auth/me and update global auth context.
+  res.redirect(`${process.env.FRONTEND_URL}/auth/callback`);
 };
 
 export const getMe = (req, res) => {
