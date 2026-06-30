@@ -8,15 +8,15 @@ import {
   likeProject,
   unlikeProject
 } from '../controllers/projectController.js';
-import { authenticate, authorizeRole } from '../middlewares/authMiddleware.js';
+import { authenticate, authorizeRole, optionalAuthenticate } from '../middlewares/authMiddleware.js';
 import { upload } from '../middlewares/uploadMiddleware.js';
 import { likeRateLimiter } from '../middlewares/rateLimitMiddleware.js';
 
 const router = express.Router();
 
-// Public routes
-router.get('/', listProjects);
-router.get('/:id', getProjectDetail);
+// Public routes (with optional session support)
+router.get('/', optionalAuthenticate, listProjects);
+router.get('/:id', optionalAuthenticate, getProjectDetail);
 
 // Protected routes (Student only for create)
 router.post(

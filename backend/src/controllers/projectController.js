@@ -152,16 +152,36 @@ export const listProjects = async (req, res, next) => {
               email: true,
               avatarUrl: true
             }
+          },
+          _count: {
+            select: { likes: true }
           }
         }
       }),
       prisma.project.count({ where })
     ]);
 
+    let finalProjects = projects;
+    if (req.user) {
+      const projectIds = projects.map((p) => p.id);
+      const userLikes = await prisma.like.findMany({
+        where: {
+          userId: req.user.id,
+          projectId: { in: projectIds }
+        },
+        select: { projectId: true }
+      });
+      const likedProjectIds = new Set(userLikes.map((l) => l.projectId));
+      finalProjects = projects.map((p) => ({
+        ...p,
+        hasLiked: likedProjectIds.has(p.id)
+      }));
+    }
+
     const totalPages = Math.ceil(total / limit);
 
     res.status(200).json({
-      projects,
+      projects: finalProjects,
       pagination: {
         total,
         page,
@@ -197,6 +217,9 @@ export const getProjectDetail = async (req, res, next) => {
             email: true,
             avatarUrl: true
           }
+        },
+        _count: {
+          select: { likes: true }
         }
       }
     });
@@ -205,7 +228,37 @@ export const getProjectDetail = async (req, res, next) => {
       return res.status(404).json({ error: 'Project not found.' });
     }
 
-    res.status(200).json(project);
+    let hasLiked = false;
+    let isFollowing = false;
+
+    if (req.user) {
+      const [likeRecord, followRecord] = await Promise.all([
+        prisma.like.findUnique({
+          where: {
+            userId_projectId: {
+              userId: req.user.id,
+              projectId: id
+            }
+          }
+        }),
+        prisma.follower.findUnique({
+          where: {
+            followerId_followedId: {
+              followerId: req.user.id,
+              followedId: project.studentId
+            }
+          }
+        })
+      ]);
+      hasLiked = !!likeRecord;
+      isFollowing = !!followRecord;
+    }
+
+    res.status(200).json({
+      ...project,
+      hasLiked,
+      isFollowing
+    });
   } catch (error) {
     next(error);
   }

@@ -76,6 +76,39 @@ export const requireAuth = async (req, res, next) => {
   }
 };
 
+export const optionalAuthenticate = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    let token = null;
+    let secret = null;
+    let userIdField = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+      secret = getJwtSecret('JWT_SECRET', 'fallback_secret_key');
+      userIdField = 'id';
+    } else if (req.cookies?.[JWT_COOKIE_NAME]) {
+      token = req.cookies[JWT_COOKIE_NAME];
+      secret = getJwtSecret('SESSION_SECRET', 'fallback_session_secret');
+      userIdField = 'userId';
+    }
+
+    if (token) {
+      const decoded = jwt.verify(token, secret);
+      const user = await prisma.user.findUnique({
+        where: { id: decoded[userIdField] }
+      });
+      if (user) {
+        req.user = user;
+      }
+    }
+    next();
+  } catch (error) {
+    next();
+  }
+};
+
+
 export const authorizeRole = (roles) => {
   return (req, res, next) => {
     if (!req.user) {

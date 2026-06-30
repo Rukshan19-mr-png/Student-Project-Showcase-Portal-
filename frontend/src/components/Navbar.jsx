@@ -54,10 +54,10 @@ export default function Navbar() {
         </Link>
 
         <nav className="navbar-links">
+          <Link to="/" className="navbar-link" id="navbar-home-link">Home</Link>
+          <Link to="/projects" className="navbar-link" id="navbar-projects-link">Projects</Link>
           {isAuthenticated && (
             <>
-              <Link to="/" className="navbar-link" id="navbar-home-link">Home</Link>
-              <Link to="/projects" className="navbar-link" id="navbar-projects-link">Projects</Link>
               {user?.role === 'STUDENT' && (
                 <Link to="/my-projects" className="navbar-link" id="navbar-my-projects-link">My Projects</Link>
               )}
