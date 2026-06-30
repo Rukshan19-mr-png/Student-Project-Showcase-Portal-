@@ -11,6 +11,7 @@ import ProjectDetailPage from './pages/ProjectDetailPage';
 import MyProjectsPage from './pages/MyProjectsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import AdminPage from './pages/AdminPage';
+import FollowingPage from './pages/FollowingPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function AppLayout({ children }) {
@@ -39,16 +40,21 @@ export default function App() {
           {/* Protected */}
           <Route element={<PrivateRoute />}>
             <Route path="/notifications" element={<AppLayout><NotificationsPage /></AppLayout>} />
-          </Route>
 
-          {/* Student only */}
-          <Route element={<RoleRoute allowedRoles={['STUDENT']} redirectTo="/" />}>
-            <Route path="/my-projects" element={<AppLayout><MyProjectsPage /></AppLayout>} />
-          </Route>
+            {/* Student only */}
+            <Route element={<RoleRoute allowedRoles={['STUDENT']} redirectTo="/" />}>
+              <Route path="/my-projects" element={<AppLayout><MyProjectsPage /></AppLayout>} />
+            </Route>
 
-          {/* Admin only */}
-          <Route element={<RoleRoute allowedRoles={['ADMIN']} redirectTo="/" />}>
-            <Route path="/admin" element={<AppLayout><AdminPage /></AppLayout>} />
+            {/* Recruiter only */}
+            <Route element={<RoleRoute allowedRoles={['RECRUITER']} redirectTo="/" />}>
+              <Route path="/following" element={<AppLayout><FollowingPage /></AppLayout>} />
+            </Route>
+
+            {/* Admin only */}
+            <Route element={<RoleRoute allowedRoles={['ADMIN']} redirectTo="/" />}>
+              <Route path="/admin" element={<AppLayout><AdminPage /></AppLayout>} />
+            </Route>
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />

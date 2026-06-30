@@ -61,6 +61,9 @@ export default function Navbar() {
               {user?.role === 'STUDENT' && (
                 <Link to="/my-projects" className="navbar-link" id="navbar-my-projects-link">My Projects</Link>
               )}
+              {user?.role === 'RECRUITER' && (
+                <Link to="/following" className="navbar-link" id="navbar-following-link">Following</Link>
+              )}
               {user?.role === 'ADMIN' && (
                 <Link to="/admin" className="navbar-link" id="navbar-admin-link">Admin</Link>
               )}

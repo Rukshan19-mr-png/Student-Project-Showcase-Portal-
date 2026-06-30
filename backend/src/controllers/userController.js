@@ -108,3 +108,48 @@ export const unfollowUser = async (req, res, next) => {
     next(error);
   }
 };
+
+// GET /users/following (requires auth, recruiter can see list of followed students)
+export const getFollowing = async (req, res, next) => {
+  try {
+    const followerId = req.user.id;
+
+    const following = await prisma.follower.findMany({
+      where: { followerId },
+      include: {
+        followed: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true,
+            projects: {
+              select: {
+                id: true,
+                title: true,
+                createdAt: true,
+              },
+              orderBy: { createdAt: 'desc' },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const followedUsers = following.map((f) => ({
+      id: f.followed.id,
+      name: f.followed.name,
+      email: f.followed.email,
+      avatarUrl: f.followed.avatarUrl,
+      projectsCount: f.followed.projects.length,
+      recentProjects: f.followed.projects.slice(0, 3),
+      followedAt: f.createdAt,
+    }));
+
+    res.status(200).json({ following: followedUsers });
+  } catch (error) {
+    next(error);
+  }
+};
+
