@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './routes/PrivateRoute';
 import RoleRoute from './routes/RoleRoute';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import LoginPage from './pages/LoginPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import HomePage from './pages/HomePage';
@@ -18,10 +19,11 @@ import NotFoundPage from './pages/NotFoundPage';
 
 function AppLayout({ children }) {
   return (
-    <>
+    <div className="app-shell">
       <Navbar />
       <main className="main-content">{children}</main>
-    </>
+      <Footer />
+    </div>
   );
 }
 

@@ -154,6 +154,12 @@ h1, h2, h3, h4, h5, h6 {
   flex-direction: column;
 }
 
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 .main-content {
   flex: 1;
   padding-top: calc(var(--navbar-height) + 40px);
@@ -545,6 +551,64 @@ h1, h2, h3, h4, h5, h6 {
 .navbar-login-btn:hover {
   transform: translateY(-1.5px);
   box-shadow: 0 6px 18px rgba(99, 102, 241, 0.5);
+}
+
+/* Site Footer */
+.site-footer {
+  border-top: 1px solid var(--clr-border);
+  background: rgba(15, 15, 30, 0.92);
+}
+
+.site-footer-inner {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.site-footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.site-footer-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--clr-text) !important;
+  font-weight: 700;
+}
+
+.site-footer-logo svg {
+  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.35));
+}
+
+.site-footer-brand p,
+.site-footer-copy {
+  color: var(--clr-text-muted);
+  font-size: var(--text-sm);
+}
+
+.site-footer-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.site-footer-links a {
+  color: var(--clr-text-muted) !important;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.site-footer-links a:hover {
+  color: var(--clr-text) !important;
 }
 
 /* ── 8. Login Page ────────────────────────────────────────── */
@@ -2446,6 +2510,15 @@ h1, h2, h3, h4, h5, h6 {
     width: calc(100vw - var(--space-8));
     right: calc(-1 * var(--space-4));
   }
+
+  .site-footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .site-footer-links {
+    justify-content: flex-start;
+  }
 }
 
 @media (max-width: 640px) {
@@ -2472,6 +2545,14 @@ h1, h2, h3, h4, h5, h6 {
   .page-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .site-footer-inner {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .site-footer-links {
+    gap: var(--space-4);
   }
 }
 
