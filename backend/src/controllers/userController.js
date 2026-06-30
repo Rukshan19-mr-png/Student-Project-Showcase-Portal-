@@ -152,4 +152,40 @@ export const getFollowing = async (req, res, next) => {
     next(error);
   }
 };
+// GET /users/all — Admin only
+export const getAllUsers = async (req, res, next) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        avatarUrl: true,
+        createdAt: true,
+        _count: {
+          select: { projects: true, followers: true, following: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+    });
 
+    res.status(200).json({ users });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// DELETE /users/:id — Admin only
+export const deleteUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (id === req.user.id) {
+      return res.status(400).json({ error: 'You cannot delete your own account.' });
+    }
+    await prisma.user.delete({ where: { id } });
+    res.status(200).json({ message: 'User deleted.' });
+  } catch (error) {
+    next(error);
+  }
+};

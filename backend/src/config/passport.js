@@ -5,11 +5,21 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const PLACEHOLDER_IDS = [
+  'your_google_client_id_here',
+  'your_google_client_secret_here',
+  'mock_google_client_id',
+  'mock_google_client_secret',
+  '',
+];
+
 export const isGoogleAuthConfigured = !!(
   process.env.GOOGLE_CLIENT_ID &&
-  process.env.GOOGLE_CLIENT_ID !== 'your_google_client_id_here' &&
   process.env.GOOGLE_CLIENT_SECRET &&
-  process.env.GOOGLE_CLIENT_SECRET !== 'your_google_client_secret_here'
+  !PLACEHOLDER_IDS.includes(process.env.GOOGLE_CLIENT_ID) &&
+  !PLACEHOLDER_IDS.includes(process.env.GOOGLE_CLIENT_SECRET) &&
+  !process.env.GOOGLE_CLIENT_ID.startsWith('mock_') &&
+  !process.env.GOOGLE_CLIENT_SECRET.startsWith('mock_')
 );
 
 if (isGoogleAuthConfigured) {
