@@ -35,7 +35,7 @@ export const rateLimit = ({
 
 export const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 300, // Increased from 10 to 300 to support 100+ concurrent students on shared university IPs
   message: 'Too many authentication attempts. Please try again in 15 minutes.',
 });
 
